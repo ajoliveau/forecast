@@ -19,38 +19,60 @@ const today = new Date();
 		}
 	});
 
-	await page.goto('https://www.meteomedia.com/ca/meteo/quebec/montreal', {waitUntil: 'networkidle'});
+	await page.goto('https://www.meteomedia.com/ca/previsions-meteo-horaires/quebec/montreal', {waitUntil: 'networkidle'});
 
-
-	let days = [];
-	for (var i = 1; i <= 7; i++) {
-		days[i - 1] = await page.evaluate((i) => {
-			var day = $('.day_' + i + ' > div:nth-child(1) > div:nth-child(1) > span:nth-child(2)').text();
-			return {
-				day: day.substr(0, day.indexOf(' ')),
-				temp: $('.day_' + i + ' .chart-daily-temp').get(0).childNodes[0].textContent.trim()
+	
+	let hours = await page.evaluate(() => {
+		var hours = [];
+		var today = new Date();
+		var dateField = $('#hourly > div > h2').text();
+		var dateText = dateField.substring(0, dateField.indexOf('-')) + '2017 ';
+		var hoursWrapper = $('#highcharts-0 > span:nth-child(4) > div.label-wrapper');
+		hoursWrapper.children().each(function(i, hour) {
+			var hourObject = {};
+			var hourText = $(hour).find('.time').get(0).childNodes[1].textContent.slice(0, -1);
+			var completeDateString = dateText + hourText + ':00:00';
+			var date = new Date(completeDateString);
+			if (i != 0 && hours[i - 1]['datetime'] >= date ) {
+				console.log('Jour suivant !');
+				date.setDate(date.getDate() + 1);
 			}
-		}, i);
-	}
-
-	days.forEach((day) => {
-		let date;
-		if (day.day >= today.getDate())
-			date = new Date(today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + day.day);
-		else
-			date = new Date(today.getFullYear() + '-' + (today.getMonth() + 2) + '-' + day.day);
-		upsertForecast({
-			website: 'meteomedia',
-			temp: day.temp,
-			date: date,
-			city: 'Montréal'
+		
+			hourObject['datetime'] = date;
+			hours[i] = hourObject;
 		});
-	});''
+
+		return hours;
+	});
+
+	// for (var i = 1; i <= 7; i++) {
+	// 	days[i - 1] = await page.evaluate((i) => {
+	// 		var day = $('.day_' + i + ' > div:nth-child(1) > div:nth-child(1) > span:nth-child(2)').text();
+	// 		return {
+	// 			day: day.substr(0, day.indexOf(' ')),
+	// 			temp: $('.day_' + i + ' .chart-daily-temp').get(0).childNodes[0].textContent.trim()
+	// 		}
+	// 	}, i);
+	// }
+
+	// days.forEach((day) => {
+	// 	let date;
+	// 	if (day.day >= today.getDate())
+	// 		date = new Date(today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + day.day);
+	// 	else
+	// 		date = new Date(today.getFullYear() + '-' + (today.getMonth() + 2) + '-' + day.day);
+	// 	upsertForecast({
+	// 		website: 'meteomedia',
+	// 		temp: day.temp,
+	// 		date: date,
+	// 		city: 'Montréal'
+	// 	});
+	// });''
 
 
-	console.log(days);
+	// console.log(days);
 	mongoose.connection.close();
-	browser.close();
+	// browser.close();
 })();
 
 
